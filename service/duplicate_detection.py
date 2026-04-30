@@ -11,6 +11,16 @@ class DuplicateDetector:
     def __init__(self, ollama_url: str = "http://localhost:11434/api/embeddings"):
         self.ollama_url = ollama_url
         self.model = "nomic-embed-text"
+        self._is_available = None
+
+    def is_available(self) -> bool:
+        """Check if the Ollama service is reachable."""
+        try:
+            # Simple probe
+            requests.get("http://localhost:11434/", timeout=2)
+            return True
+        except:
+            return False
 
     def _get_embedding(self, text: str) -> np.ndarray:
         """Fetch embedding vector from Ollama."""
@@ -18,15 +28,14 @@ class DuplicateDetector:
             response = requests.post(
                 self.ollama_url,
                 json={"model": self.model, "prompt": text},
-                timeout=5
+                timeout=30 # Increased from 5 to 30 to prevent timeouts on slower hardware
             )
             response.raise_for_status()
             return np.array(response.json()["embedding"])
         except Exception as e:
-            # If Ollama is not running, we'll return a zero vector 
-            # (or we could raise an error depending on desired behavior)
-            print(f"Ollama embedding error: {e}")
-            return np.zeros(768) # nomic-embed-text dimension is 768
+            # Provide more context for debugging
+            print(f"DEBUG: Ollama embedding error: {e}")
+            return np.zeros(768)
 
     def _cosine_similarity(self, v1: np.ndarray, v2: np.ndarray) -> float:
         """Compute cosine similarity between two vectors."""

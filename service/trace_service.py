@@ -290,6 +290,42 @@ class TraceService:
             return False, f"Requirement ID '{req_id}' already exists"
         else:
             return False, f"Database error: {result}"
+
+    def update_requirement(self, req_id: str, description: str, req_type: str) -> Tuple[bool, str]:
+        """
+        Update an existing requirement.
+        """
+        # Validate inputs
+        valid, error = self._validate_not_empty(req_id, "Requirement ID")
+        if not valid: return False, error
+        valid, error = self._validate_not_empty(description, "Description")
+        if not valid: return False, error
+        
+        if req_type not in ['Functional', 'Non-Functional']:
+            return False, "Type must be 'Functional' or 'Non-Functional'"
+
+        # Check if requirement exists
+        if not self.db.requirement_exists(req_id):
+            return False, f"Requirement '{req_id}' does not exist"
+
+        result = self.db.update_requirement(req_id, description, req_type)
+        if result is True:
+            return True, f"Requirement '{req_id}' updated successfully"
+        else:
+            return False, f"Database error: {result}"
+
+    def delete_requirement(self, req_id: str) -> Tuple[bool, str]:
+        """
+        Delete a requirement.
+        """
+        if not self.db.requirement_exists(req_id):
+            return False, f"Requirement '{req_id}' does not exist"
+
+        result = self.db.delete_requirement(req_id)
+        if result is True:
+            return True, f"Requirement '{req_id}' deleted successfully"
+        else:
+            return False, f"Database error: {result}"
     
     def get_all_requirements(self) -> List[Tuple[str, str, str]]:
         """

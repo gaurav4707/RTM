@@ -63,22 +63,27 @@ class GraphVisualizer:
         fig, ax = plt.subplots(figsize=(8, 6))
         
         # Get attributes based on node type
-        colors = [nx.get_node_attributes(G, 'color').get(node, '#808080') for node in G.nodes()]
-        sizes = [nx.get_node_attributes(G, 'size').get(node, 1000) for node in G.nodes()]
+        node_colors = [nx.get_node_attributes(G, 'color').get(node, '#808080') for node in G.nodes()]
+        node_sizes = [nx.get_node_attributes(G, 'size').get(node, 1000) for node in G.nodes()]
+        
+        # Get edge attributes
+        edge_colors = [nx.get_edge_attributes(G, 'color').get(edge, '#AAAAAA') for edge in G.edges()]
         
         # Use spring layout for better readability
         pos = nx.spring_layout(G, seed=42, k=0.5)
         
-        nx.draw(G, pos, ax=ax, with_labels=True, node_color=colors, 
-                node_size=sizes, font_size=10, font_weight='bold',
-                edge_color='#AAAAAA', width=2)
+        nx.draw(G, pos, ax=ax, with_labels=True, node_color=node_colors, 
+                node_size=node_sizes, font_size=10, font_weight='bold',
+                edge_color=edge_colors, width=2)
                 
         # Add legend
         import matplotlib.patches as mpatches
-        req_patch = mpatches.Patch(color='#4CAF50', label='Requirements')
-        des_patch = mpatches.Patch(color='#2196F3', label='Design Modules')
-        test_patch = mpatches.Patch(color='#FFC107', label='Test Cases')
-        ax.legend(handles=[req_patch, des_patch, test_patch], loc='upper right')
+        import matplotlib.lines as mlines
+        req_patch = mpatches.Patch(color='#4CAF50', label='Requirement')
+        des_patch = mpatches.Patch(color='#2196F3', label='Design Module')
+        test_patch = mpatches.Patch(color='#FFC107', label='Test Case')
+        dep_line = mlines.Line2D([], [], color='red', label='Dependency', linewidth=2)
+        ax.legend(handles=[req_patch, des_patch, test_patch, dep_line], loc='upper right')
         
         plt.tight_layout()
         

@@ -120,6 +120,7 @@ class RTMApplication:
         ttk.Button(btn_frame, text="Refresh Dashboard", command=self._refresh_dashboard_metrics).pack(side='left', padx=5)
         ttk.Button(btn_frame, text="System Health Check", command=self._run_system_validation).pack(side='left', padx=5)
         ttk.Button(btn_frame, text="Detect Duplicates (AI)", command=self._run_duplicate_detection).pack(side='left', padx=5)
+        ttk.Button(btn_frame, text="Show Relationship Graph", command=self._show_relationship_graph).pack(side='left', padx=5)
 
         # PDF Export Section
         export_frame = ttk.LabelFrame(self.dashboard_tab, text="Reporting", padding=10)
@@ -129,6 +130,26 @@ class RTMApplication:
 
         # Initial load
         self._refresh_dashboard_metrics()
+
+    def _show_relationship_graph(self) -> None:
+        """Open a new window to display the project relationship graph."""
+        popup = tk.Toplevel(self.root)
+        popup.title("Project Relationship Graph")
+        popup.geometry("900x700")
+        
+        # Create a frame for the graph
+        graph_frame = ttk.Frame(popup, padding=10)
+        graph_frame.pack(fill='both', expand=True)
+        
+        ttk.Label(popup, text="Requirement Traceability & Dependency Graph", 
+                  style='Header.TLabel').pack(pady=10)
+        
+        try:
+            visualizer = GraphVisualizer(self.service)
+            visualizer.draw_graph(graph_frame)
+        except Exception as e:
+            messagebox.showerror("Visualization Error", f"Failed to generate graph: {e}")
+            popup.destroy()
 
     def _show_export_options(self) -> None:
         """Show a popup menu with different report export options."""
@@ -197,6 +218,11 @@ class RTMApplication:
 
     def _run_duplicate_detection(self) -> None:
         """Run AI-based duplicate detection and show results."""
+        # Pre-check Ollama availability
+        if not self.service.duplicate_detector.is_available():
+            messagebox.showerror("AI Error", "Cannot reach Ollama service.\n\nPlease ensure Ollama is running on localhost:11434.")
+            return
+
         duplicates = self.service.detect_duplicates()
         if not duplicates:
             messagebox.showinfo("Duplicate Detection", "No duplicate requirements detected.")
@@ -417,7 +443,10 @@ class RTMApplication:
         # Add Button
         self.add_req_btn = ttk.Button(form_frame, text="Add Requirement", command=self._add_requirement)
         self.add_req_btn.grid(row=2, column=1, sticky='w', padx=(10, 0), pady=10)
-
+        
+        self.cancel_edit_btn = ttk.Button(form_frame, text="Cancel", command=self._reset_req_form)
+        # Hidden initially
+        
         # ----- Dependency Section -----
         dep_frame = ttk.LabelFrame(self.req_tab, text="Link Requirement Dependencies", padding=15)
         dep_frame.pack(fill='x', pady=(0, 15))
@@ -436,6 +465,13 @@ class RTMApplication:
         # ----- Table Section -----
         table_frame = ttk.LabelFrame(self.req_tab, text="Existing Requirements", padding=15)
         table_frame.pack(fill='both', expand=True)
+        
+        # Action buttons for table
+        btn_bar = ttk.Frame(table_frame)
+        btn_bar.pack(fill='x', pady=(0, 10))
+        
+        ttk.Button(btn_bar, text="Edit Selected", command=self._edit_requirement_ui).pack(side='left', padx=5)
+        ttk.Button(btn_bar, text="Delete Selected", command=self._delete_requirement_ui).pack(side='left', padx=5)
         
         # Create Treeview for displaying requirements
         columns = ('ID', 'Description', 'Type')
@@ -504,6 +540,83 @@ class RTMApplication:
         requirements = self.service.get_all_requirements()
         for req in requirements:
             self.req_tree.insert('', tk.END, values=req)
+
+    def _edit_requirement_ui(self) -> None:
+        """Populate form with selected requirement for editing."""
+        selected = self.req_tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a requirement to edit")
+            return
+        
+        item = self.req_tree.item(selected[0])
+        req_id, description, req_type = item['values']
+        
+        # Populate form
+        self.req_id_entry.delete(0, tk.END)
+        self.req_id_entry.insert(0, req_id)
+        self.req_id_entry.config(state='readonly')
+        
+        self.req_type_var.set(req_type)
+        
+        self.req_desc_text.delete("1.0", tk.END)
+        self.req_desc_text.insert("1.0", description)
+        
+        # Change button to Update mode
+        self.add_req_btn.config(text="Update Requirement", command=self._update_requirement)
+        
+        # Show cancel button
+        self.cancel_edit_btn.grid(row=2, column=2, sticky='w', padx=(10, 0), pady=10)
+
+    def _update_requirement(self) -> None:
+        """Handle updating an existing requirement."""
+        req_id = self.req_id_entry.get().strip()
+        req_type = self.req_type_var.get()
+        description = self.req_desc_text.get("1.0", tk.END).strip()
+        
+        if not description:
+            messagebox.showerror("Error", "Description cannot be empty")
+            return
+
+        success, message = self.service.update_requirement(req_id, description, req_type)
+        
+        if success:
+            messagebox.showinfo("Success", message)
+            self._reset_req_form()
+            self._refresh_requirements_list()
+            self._refresh_rtm() # Sync Traceability tab
+        else:
+            messagebox.showerror("Error", message)
+
+    def _delete_requirement_ui(self) -> None:
+        """Handle deleting a requirement with confirmation."""
+        selected = self.req_tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a requirement to delete")
+            return
+        
+        item = self.req_tree.item(selected[0])
+        req_id = item['values'][0]
+        
+        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete requirement '{req_id}'?\n\nThis will also remove all linked design modules, test cases, and dependencies."):
+            success, message = self.service.delete_requirement(req_id)
+            if success:
+                messagebox.showinfo("Success", message)
+                self._refresh_requirements_list()
+                self._refresh_rtm()
+                self._refresh_traceability_dropdowns()
+                self._refresh_dashboard_metrics()
+            else:
+                messagebox.showerror("Error", message)
+
+    def _reset_req_form(self) -> None:
+        """Reset the requirement form to 'Add' mode."""
+        self.req_id_entry.config(state='normal')
+        self.req_id_entry.delete(0, tk.END)
+        self.req_desc_text.delete("1.0", tk.END)
+        self.req_type_var.set("Functional")
+        
+        self.add_req_btn.config(text="Add Requirement", command=self._add_requirement)
+        self.cancel_edit_btn.grid_forget()
     
     # ==================== DESIGN MODULES TAB ====================
     
@@ -743,38 +856,38 @@ class RTMApplication:
         self.link_tc_btn.grid(row=3, column=1, sticky='w', padx=10, pady=10)
 
         # ----- AI Suggestion Section -----
-        suggest_frame = ttk.LabelFrame(self.rtm_tab, text="AI Link Assistant (Auto-Mapping)", padding=10)
-        suggest_frame.pack(fill='x', pady=(0, 10))
+       # suggest_frame = ttk.LabelFrame(self.rtm_tab, text="AI Link Assistant (Auto-Mapping)", padding=10)
+       # suggest_frame.pack(fill='x', pady=(0, 10))
 
         # Selection row
-        top_row = ttk.Frame(suggest_frame)
-        top_row.pack(fill='x', pady=5)
-        ttk.Label(top_row, text="Requirement:").pack(side='left')
-        self.suggest_req_combo = ttk.Combobox(top_row, width=30, state="readonly")
-        self.suggest_req_combo.pack(side='left', padx=10)
-        ttk.Button(top_row, text="Analyze & Suggest", command=self._get_suggestions).pack(side='left')
+        #top_row = ttk.Frame(suggest_frame)
+        #top_row.pack(fill='x', pady=5)
+        #ttk.Label(top_row, text="Requirement:").pack(side='left')
+        #self.suggest_req_combo = ttk.Combobox(top_row, width=30, state="readonly")
+        #self.suggest_req_combo.pack(side='left', padx=10)
+        #ttk.Button(top_row, text="Analyze & Suggest", command=self._get_suggestions).pack(side='left')
 
         # Lists row
-        list_row = ttk.Frame(suggest_frame)
-        list_row.pack(fill='x', pady=5)
+        #list_row = ttk.Frame(suggest_frame)
+        #list_row.pack(fill='x', pady=5)
         
-        d_frame = ttk.Frame(list_row)
-        d_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(d_frame, text="Suggested Design:").pack(anchor='w')
-        self.suggest_design_list = tk.Listbox(d_frame, height=3)
-        self.suggest_design_list.pack(fill='x')
+        #d_frame = ttk.Frame(list_row)
+        #d_frame.pack(side='left', fill='both', expand=True, padx=5)
+        #ttk.Label(d_frame, text="Suggested Design:").pack(anchor='w')
+        #self.suggest_design_list = tk.Listbox(d_frame, height=3)
+        #self.suggest_design_list.pack(fill='x')
 
-        t_frame = ttk.Frame(list_row)
-        t_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(t_frame, text="Suggested Tests:").pack(anchor='w')
-        self.suggest_test_list = tk.Listbox(t_frame, height=3)
-        self.suggest_test_list.pack(fill='x')
+        #t_frame = ttk.Frame(list_row)
+        #t_frame.pack(side='left', fill='both', expand=True, padx=5)
+        #ttk.Label(t_frame, text="Suggested Tests:").pack(anchor='w')
+        #self.suggest_test_list = tk.Listbox(t_frame, height=3)
+        #self.suggest_test_list.pack(fill='x')
 
         # Action row
-        self.apply_suggest_btn = ttk.Button(suggest_frame, text="Apply All Suggestions", command=self._apply_suggestions, state='disabled')
-        self.apply_suggest_btn.pack(pady=5)
+        #self.apply_suggest_btn = ttk.Button(suggest_frame, text="Apply All Suggestions", command=self._apply_suggestions, state='disabled')
+        #self.apply_suggest_btn.pack(pady=5)
         
-        self.current_suggestions = None
+        #self.current_suggestions = None
 
         # ----- RTM Table Section -----
         table_frame = ttk.LabelFrame(self.rtm_tab, text="Requirement Traceability Matrix", padding=10)
@@ -817,72 +930,72 @@ class RTMApplication:
         self._refresh_traceability_dropdowns()
         self._refresh_rtm()
     
-    def _get_suggestions(self) -> None:
-        """Fetch and display link suggestions for the selected requirement."""
-        req_id = self.suggest_req_combo.get()
-        if not req_id:
-            messagebox.showwarning("Warning", "Please select a requirement first")
-            return
-
-        # Fetch requirement text
-        req_data = self.service.get_requirement_by_id(req_id)
-        if not req_data:
-            return
-        
-        req_text = req_data[1]
-        
-        # Call service for suggestions
-        suggestions = self.service.suggest_links(req_text)
-        self.current_suggestions = suggestions
+#    def _get_suggestions(self) -> None:
+#        """Fetch and display link suggestions for the selected requirement."""
+#        req_id = self.suggest_req_combo.get()
+#        if not req_id:
+#            messagebox.showwarning("Warning", "Please select a requirement first")
+#            return#
+#
+#        # Fetch requirement text
+#        req_data = self.service.get_requirement_by_id(req_id)
+#        if not req_data:
+#            return
+#       
+#        req_text = req_data[1]
+#        
+#        # Call service for suggestions
+#        suggestions = self.service.suggest_links(req_text)
+#        self.current_suggestions = suggestions
 
         # Update Lists
-        self.suggest_design_list.delete(0, tk.END)
-        if not suggestions['design']:
-            self.suggest_design_list.insert(tk.END, "No strong matches found")
-        else:
-            for dm_id in suggestions['design']:
-                self.suggest_design_list.insert(tk.END, dm_id)
+ #       self.suggest_design_list.delete(0, tk.END)
+  #      if not suggestions['design']:
+   #         self.suggest_design_list.insert(tk.END, "No strong matches found")
+    #    else:
+    #        for dm_id in suggestions['design']:
+    #            self.suggest_design_list.insert(tk.END, dm_id)
 
-        self.suggest_test_list.delete(0, tk.END)
-        if not suggestions['tests']:
-            self.suggest_test_list.insert(tk.END, "No strong matches found")
-        else:
-            for tc_id in suggestions['tests']:
-                self.suggest_test_list.insert(tk.END, tc_id)
+#        self.suggest_test_list.delete(0, tk.END)
+#        if not suggestions['tests']:
+#            self.suggest_test_list.insert(tk.END, "No strong matches found")
+#        else:
+#            for tc_id in suggestions['tests']:
+#                self.suggest_test_list.insert(tk.END, tc_id)
 
         # Enable Apply button if suggestions exist
-        if suggestions['design'] or suggestions['tests']:
-            self.apply_suggest_btn.config(state='normal')
-        else:
-            self.apply_suggest_btn.config(state='disabled')
+#        if suggestions['design'] or suggestions['tests']:
+#            self.apply_suggest_btn.config(state='normal')
+ #       else:
+ #           self.apply_suggest_btn.config(state='disabled')
 
-    def _apply_suggestions(self) -> None:
-        """Automatically create trace links for all suggestions."""
-        if not self.current_suggestions:
-            return
+#    def _apply_suggestions(self) -> None:
+ #       """Automatically create trace links for all suggestions."""
+#        if not self.current_suggestions:
+    #        return
             
-        req_id = self.suggest_req_combo.get()
-        if not req_id:
-            return
+   #     req_id = self.suggest_req_combo.get()
+   #     if not req_id:
+  #          return
 
         applied_count = 0
         
         # Link Designs
-        for dm_id in self.current_suggestions['design']:
-            success, _ = self.service.link_requirement_to_design(req_id, dm_id)
-            if success: applied_count += 1
+    #    for dm_id in self.current_suggestions['design']:
+    #        success, _ = self.service.link_requirement_to_design(req_id, dm_id)
+     #       if success: applied_count += 1
             
         # Link Tests
-        for tc_id in self.current_suggestions['tests']:
-            success, _ = self.service.link_requirement_to_test(req_id, tc_id)
-            if success: applied_count += 1
+   #     for tc_id in self.current_suggestions['tests']:
+    #        success, _ = self.service.link_requirement_to_test(req_id, tc_id)
+  #          if success: applied_count += 1
 
-        if applied_count > 0:
-            messagebox.showinfo("Success", f"Successfully applied {applied_count} trace links based on AI suggestions.")
-            self._refresh_rtm()
-            self.apply_suggest_btn.config(state='disabled')
-        else:
-            messagebox.showinfo("Info", "No new links were created (they might already exist).")
+ #       if applied_count > 0:
+ #           messagebox.showinfo("Success", f"Successfully applied {applied_count} trace links based on AI suggestions.")
+#            self._refresh_rtm()
+#            self.apply_suggest_btn.config(state='disabled')
+#        else:
+#            messagebox.showinfo("Info", "No new links were created (they might already exist).")
 
     def _refresh_traceability_dropdowns(self) -> None:
         """Refresh all dropdown menus in the traceability tab."""

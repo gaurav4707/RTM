@@ -167,6 +167,34 @@ class Database:
             cursor.execute("SELECT 1 FROM requirements WHERE req_id = ?", (req_id,))
             return cursor.fetchone() is not None
     
+    def update_requirement(self, req_id: str, description: str, req_type: str) -> bool:
+        """
+        Update an existing requirement's description and type.
+        """
+        try:
+            with self._connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE requirements SET description = ?, req_type = ? WHERE req_id = ?",
+                    (description, req_type, req_id)
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            return f"error:{str(e)}"
+
+    def delete_requirement(self, req_id: str) -> bool:
+        """
+        Delete a requirement from the database.
+        Cascading deletes are handled by SQL foreign key constraints.
+        """
+        try:
+            with self._connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM requirements WHERE req_id = ?", (req_id,))
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            return f"error:{str(e)}"
+    
     # ==================== DESIGN MODULE OPERATIONS ====================
     
     def add_design_module(self, module_id: str, name: str, description: str) -> bool:
