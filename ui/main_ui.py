@@ -70,46 +70,46 @@ class RTMApplication:
 
     def _create_dashboard_tab(self) -> None:
         """Create the Dashboard tab with coverage, traceability, and risk summary."""
-        self.dashboard_tab = ttk.Frame(self.notebook, padding=10)
+        self.dashboard_tab = ttk.Frame(self.notebook, padding=20)
         self.notebook.add(self.dashboard_tab, text='Dashboard')
 
         # Coverage Section
-        coverage_frame = ttk.LabelFrame(self.dashboard_tab, text="Coverage Metrics", padding=10)
-        coverage_frame.pack(fill='x', pady=8)
+        coverage_frame = ttk.LabelFrame(self.dashboard_tab, text="Coverage Metrics", padding=15)
+        coverage_frame.pack(fill='x', pady=10)
         self.coverage_labels = {}
         for i, (label, key) in enumerate([
             ("Total Requirements", "total"),
             ("Design Coverage", "design_coverage"),
             ("Test Coverage", "test_coverage")]):
-            ttk.Label(coverage_frame, text=label+":").grid(row=i, column=0, sticky='w', pady=2)
+            ttk.Label(coverage_frame, text=label+":", font=('Segoe UI', 10, 'bold')).grid(row=i, column=0, sticky='w', pady=4)
             val = ttk.Label(coverage_frame, text="-")
-            val.grid(row=i, column=1, sticky='w', pady=2)
+            val.grid(row=i, column=1, sticky='w', padx=15, pady=4)
             self.coverage_labels[key] = val
 
         # Traceability Section
-        trace_frame = ttk.LabelFrame(self.dashboard_tab, text="Traceability Breakdown", padding=10)
-        trace_frame.pack(fill='x', pady=8)
+        trace_frame = ttk.LabelFrame(self.dashboard_tab, text="Traceability Breakdown", padding=15)
+        trace_frame.pack(fill='x', pady=10)
         self.trace_labels = {}
         for i, (label, key) in enumerate([
             ("Fully Traced", "fully_traced"),
             ("Partially Traced", "partially_traced"),
             ("Untraced", "untraced")]):
-            ttk.Label(trace_frame, text=label+":").grid(row=i, column=0, sticky='w', pady=2)
+            ttk.Label(trace_frame, text=label+":", font=('Segoe UI', 10, 'bold')).grid(row=i, column=0, sticky='w', pady=4)
             val = ttk.Label(trace_frame, text="-")
-            val.grid(row=i, column=1, sticky='w', pady=2)
+            val.grid(row=i, column=1, sticky='w', padx=15, pady=4)
             self.trace_labels[key] = val
 
         # Risk Summary Section
-        risk_frame = ttk.LabelFrame(self.dashboard_tab, text="Risk Summary", padding=10)
-        risk_frame.pack(fill='x', pady=8)
+        risk_frame = ttk.LabelFrame(self.dashboard_tab, text="Risk Summary", padding=15)
+        risk_frame.pack(fill='x', pady=10)
         self.risk_labels = {}
         for i, (label, key, color) in enumerate([
             ("HIGH Risk", "HIGH", "red"),
             ("MEDIUM Risk", "MEDIUM", "orange"),
             ("LOW Risk", "LOW", "green")]):
-            ttk.Label(risk_frame, text=label+":").grid(row=i, column=0, sticky='w', pady=2)
+            ttk.Label(risk_frame, text=label+":", font=('Segoe UI', 10, 'bold')).grid(row=i, column=0, sticky='w', pady=4)
             val = ttk.Label(risk_frame, text="-", foreground=color, font=('Segoe UI', 10, 'bold'))
-            val.grid(row=i, column=1, sticky='w', pady=2)
+            val.grid(row=i, column=1, sticky='w', padx=15, pady=4)
             self.risk_labels[key] = val
 
 
@@ -353,14 +353,27 @@ class RTMApplication:
     def _setup_main_window(self) -> None:
         """Configure the main application window."""
         self.root.title("Requirement Traceability Matrix Tool")
-        self.root.geometry("900x600")
-        self.root.resizable(False, False)
+        self.root.geometry("1100x800")
+        self.root.resizable(True, True)
         
         # Configure style for consistent look
         style = ttk.Style()
+        # Use a more modern theme if available
+        if 'clam' in style.theme_names():
+            style.theme_use('clam')
+            
         style.configure('TLabel', font=('Segoe UI', 10))
-        style.configure('TButton', font=('Segoe UI', 10))
-        style.configure('Header.TLabel', font=('Segoe UI', 12, 'bold'))
+        style.configure('TButton', font=('Segoe UI', 10), padding=5)
+        style.configure('Header.TLabel', font=('Segoe UI', 12, 'bold'), foreground='#2C3E50')
+        style.configure('TLabelframe.Label', font=('Segoe UI', 11, 'bold'), foreground='#2980B9')
+        
+        # Treeview Styling
+        style.configure("Treeview", font=('Segoe UI', 10), rowheight=28)
+        style.configure("Treeview.Heading", font=('Segoe UI', 10, 'bold'))
+        
+        # Set up a grid weight for the root to allow resizing
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
     
     def _create_notebook(self) -> None:
         """Create the tabbed notebook interface."""
@@ -372,20 +385,20 @@ class RTMApplication:
     def _create_requirements_tab(self) -> None:
         """Create the Requirements tab with input form and list view."""
         # Create the tab frame
-        self.req_tab = ttk.Frame(self.notebook, padding=10)
+        self.req_tab = ttk.Frame(self.notebook, padding=15)
         self.notebook.add(self.req_tab, text='Requirements')
         
         # ----- Input Form Section -----
-        form_frame = ttk.LabelFrame(self.req_tab, text="Add New Requirement", padding=10)
-        form_frame.pack(fill='x', pady=(0, 10))
+        form_frame = ttk.LabelFrame(self.req_tab, text="Add New Requirement", padding=15)
+        form_frame.pack(fill='x', pady=(0, 15))
         
         # Requirement ID
-        ttk.Label(form_frame, text="Requirement ID:").grid(row=0, column=0, sticky='w', pady=5)
+        ttk.Label(form_frame, text="Requirement ID:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky='w', pady=5)
         self.req_id_entry = ttk.Entry(form_frame, width=30)
         self.req_id_entry.grid(row=0, column=1, sticky='w', padx=(10, 20), pady=5)
         
         # Requirement Type
-        ttk.Label(form_frame, text="Type:").grid(row=0, column=2, sticky='w', pady=5)
+        ttk.Label(form_frame, text="Type:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=2, sticky='w', pady=5)
         self.req_type_var = tk.StringVar(value="Functional")
         self.req_type_combo = ttk.Combobox(
             form_frame, 
@@ -397,8 +410,8 @@ class RTMApplication:
         self.req_type_combo.grid(row=0, column=3, sticky='w', padx=10, pady=5)
         
         # Description
-        ttk.Label(form_frame, text="Description:").grid(row=1, column=0, sticky='nw', pady=5)
-        self.req_desc_text = tk.Text(form_frame, height=3, width=60)
+        ttk.Label(form_frame, text="Description:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky='nw', pady=5)
+        self.req_desc_text = tk.Text(form_frame, height=4, width=70, font=('Segoe UI', 10))
         self.req_desc_text.grid(row=1, column=1, columnspan=3, sticky='w', padx=(10, 0), pady=5)
         
         # Add Button
@@ -406,14 +419,14 @@ class RTMApplication:
         self.add_req_btn.grid(row=2, column=1, sticky='w', padx=(10, 0), pady=10)
 
         # ----- Dependency Section -----
-        dep_frame = ttk.LabelFrame(self.req_tab, text="Link Requirement Dependencies", padding=10)
-        dep_frame.pack(fill='x', pady=(0, 10))
+        dep_frame = ttk.LabelFrame(self.req_tab, text="Link Requirement Dependencies", padding=15)
+        dep_frame.pack(fill='x', pady=(0, 15))
 
-        ttk.Label(dep_frame, text="Requirement:").grid(row=0, column=0, sticky='w', pady=5)
+        ttk.Label(dep_frame, text="Requirement:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky='w', pady=5)
         self.child_req_combo = ttk.Combobox(dep_frame, width=20, state="readonly")
         self.child_req_combo.grid(row=0, column=1, sticky='w', padx=10, pady=5)
 
-        ttk.Label(dep_frame, text="Depends On:").grid(row=0, column=2, sticky='w', pady=5)
+        ttk.Label(dep_frame, text="Depends On:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=2, sticky='w', pady=5)
         self.parent_req_combo = ttk.Combobox(dep_frame, width=20, state="readonly")
         self.parent_req_combo.grid(row=0, column=3, sticky='w', padx=10, pady=5)
 
@@ -421,7 +434,7 @@ class RTMApplication:
         self.link_dep_btn.grid(row=0, column=4, sticky='w', padx=20, pady=5)
         
         # ----- Table Section -----
-        table_frame = ttk.LabelFrame(self.req_tab, text="Existing Requirements", padding=10)
+        table_frame = ttk.LabelFrame(self.req_tab, text="Existing Requirements", padding=15)
         table_frame.pack(fill='both', expand=True)
         
         # Create Treeview for displaying requirements
@@ -433,9 +446,9 @@ class RTMApplication:
         self.req_tree.heading('Description', text='Description')
         self.req_tree.heading('Type', text='Type')
         
-        self.req_tree.column('ID', width=120, minwidth=100)
-        self.req_tree.column('Description', width=500, minwidth=300)
-        self.req_tree.column('Type', width=120, minwidth=100)
+        self.req_tree.column('ID', width=150, minwidth=100)
+        self.req_tree.column('Description', width=600, minwidth=300)
+        self.req_tree.column('Type', width=150, minwidth=100)
         
         # Add scrollbar
         req_scrollbar = ttk.Scrollbar(table_frame, orient='vertical', command=self.req_tree.yview)
@@ -497,26 +510,26 @@ class RTMApplication:
     def _create_design_modules_tab(self) -> None:
         """Create the Design Modules tab with input form and list view."""
         # Create the tab frame
-        self.dm_tab = ttk.Frame(self.notebook, padding=10)
+        self.dm_tab = ttk.Frame(self.notebook, padding=15)
         self.notebook.add(self.dm_tab, text='Design Modules')
         
         # ----- Input Form Section -----
-        form_frame = ttk.LabelFrame(self.dm_tab, text="Add New Design Module", padding=10)
-        form_frame.pack(fill='x', pady=(0, 10))
+        form_frame = ttk.LabelFrame(self.dm_tab, text="Add New Design Module", padding=15)
+        form_frame.pack(fill='x', pady=(0, 15))
         
         # Module ID
-        ttk.Label(form_frame, text="Module ID:").grid(row=0, column=0, sticky='w', pady=5)
+        ttk.Label(form_frame, text="Module ID:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky='w', pady=5)
         self.dm_id_entry = ttk.Entry(form_frame, width=30)
         self.dm_id_entry.grid(row=0, column=1, sticky='w', padx=(10, 20), pady=5)
         
         # Module Name
-        ttk.Label(form_frame, text="Name:").grid(row=0, column=2, sticky='w', pady=5)
+        ttk.Label(form_frame, text="Name:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=2, sticky='w', pady=5)
         self.dm_name_entry = ttk.Entry(form_frame, width=30)
         self.dm_name_entry.grid(row=0, column=3, sticky='w', padx=10, pady=5)
         
         # Description
-        ttk.Label(form_frame, text="Description:").grid(row=1, column=0, sticky='nw', pady=5)
-        self.dm_desc_text = tk.Text(form_frame, height=3, width=60)
+        ttk.Label(form_frame, text="Description:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky='nw', pady=5)
+        self.dm_desc_text = tk.Text(form_frame, height=4, width=70, font=('Segoe UI', 10))
         self.dm_desc_text.grid(row=1, column=1, columnspan=3, sticky='w', padx=(10, 0), pady=5)
         
         # Add Button
@@ -524,7 +537,7 @@ class RTMApplication:
         self.add_dm_btn.grid(row=2, column=1, sticky='w', padx=(10, 0), pady=10)
         
         # ----- Table Section -----
-        table_frame = ttk.LabelFrame(self.dm_tab, text="Existing Design Modules", padding=10)
+        table_frame = ttk.LabelFrame(self.dm_tab, text="Existing Design Modules", padding=15)
         table_frame.pack(fill='both', expand=True)
         
         # Create Treeview for displaying design modules
@@ -536,9 +549,9 @@ class RTMApplication:
         self.dm_tree.heading('Name', text='Name')
         self.dm_tree.heading('Description', text='Description')
         
-        self.dm_tree.column('ID', width=120, minwidth=100)
-        self.dm_tree.column('Name', width=200, minwidth=150)
-        self.dm_tree.column('Description', width=420, minwidth=300)
+        self.dm_tree.column('ID', width=150, minwidth=100)
+        self.dm_tree.column('Name', width=250, minwidth=150)
+        self.dm_tree.column('Description', width=500, minwidth=300)
         
         # Add scrollbar
         dm_scrollbar = ttk.Scrollbar(table_frame, orient='vertical', command=self.dm_tree.yview)
@@ -589,26 +602,26 @@ class RTMApplication:
     def _create_test_cases_tab(self) -> None:
         """Create the Test Cases tab with input form and list view."""
         # Create the tab frame
-        self.tc_tab = ttk.Frame(self.notebook, padding=10)
+        self.tc_tab = ttk.Frame(self.notebook, padding=15)
         self.notebook.add(self.tc_tab, text='Test Cases')
         
         # ----- Input Form Section -----
-        form_frame = ttk.LabelFrame(self.tc_tab, text="Add New Test Case", padding=10)
-        form_frame.pack(fill='x', pady=(0, 10))
+        form_frame = ttk.LabelFrame(self.tc_tab, text="Add New Test Case", padding=15)
+        form_frame.pack(fill='x', pady=(0, 15))
         
         # Test ID
-        ttk.Label(form_frame, text="Test ID:").grid(row=0, column=0, sticky='w', pady=5)
+        ttk.Label(form_frame, text="Test ID:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky='w', pady=5)
         self.tc_id_entry = ttk.Entry(form_frame, width=30)
         self.tc_id_entry.grid(row=0, column=1, sticky='w', padx=(10, 0), pady=5)
         
         # Description
-        ttk.Label(form_frame, text="Description:").grid(row=1, column=0, sticky='nw', pady=5)
-        self.tc_desc_text = tk.Text(form_frame, height=2, width=60)
+        ttk.Label(form_frame, text="Description:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky='nw', pady=5)
+        self.tc_desc_text = tk.Text(form_frame, height=3, width=70, font=('Segoe UI', 10))
         self.tc_desc_text.grid(row=1, column=1, sticky='w', padx=(10, 0), pady=5)
         
         # Expected Result
-        ttk.Label(form_frame, text="Expected Result:").grid(row=2, column=0, sticky='nw', pady=5)
-        self.tc_result_text = tk.Text(form_frame, height=2, width=60)
+        ttk.Label(form_frame, text="Expected Result:", font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky='nw', pady=5)
+        self.tc_result_text = tk.Text(form_frame, height=3, width=70, font=('Segoe UI', 10))
         self.tc_result_text.grid(row=2, column=1, sticky='w', padx=(10, 0), pady=5)
         
         # Add Button
@@ -616,7 +629,7 @@ class RTMApplication:
         self.add_tc_btn.grid(row=3, column=1, sticky='w', padx=(10, 0), pady=10)
         
         # ----- Table Section -----
-        table_frame = ttk.LabelFrame(self.tc_tab, text="Existing Test Cases", padding=10)
+        table_frame = ttk.LabelFrame(self.tc_tab, text="Existing Test Cases", padding=15)
         table_frame.pack(fill='both', expand=True)
         
         # Create Treeview for displaying test cases
@@ -628,9 +641,9 @@ class RTMApplication:
         self.tc_tree.heading('Description', text='Description')
         self.tc_tree.heading('Expected Result', text='Expected Result')
         
-        self.tc_tree.column('ID', width=100, minwidth=80)
-        self.tc_tree.column('Description', width=350, minwidth=250)
-        self.tc_tree.column('Expected Result', width=290, minwidth=200)
+        self.tc_tree.column('ID', width=150, minwidth=100)
+        self.tc_tree.column('Description', width=450, minwidth=250)
+        self.tc_tree.column('Expected Result', width=300, minwidth=200)
         
         # Add scrollbar
         tc_scrollbar = ttk.Scrollbar(table_frame, orient='vertical', command=self.tc_tree.yview)
@@ -795,6 +808,11 @@ class RTMApplication:
         self.rtm_tree.pack(side='left', fill='both', expand=True)
         rtm_scrollbar.pack(side='right', fill='y')
         
+        # Configure Tags for Color Coding
+        self.rtm_tree.tag_configure('full', background='#D5F5E3')    # Light Green
+        self.rtm_tree.tag_configure('partial', background='#FCF3CF') # Light Yellow
+        self.rtm_tree.tag_configure('none', background='#FADBD8')    # Light Red
+        
         # Initialize dropdowns and table
         self._refresh_traceability_dropdowns()
         self._refresh_rtm()
@@ -936,7 +954,18 @@ class RTMApplication:
         rtm_data = self.service.get_traceability_matrix()
         for row in rtm_data:
             # row = (req_id, description, type, modules, tests)
-            self.rtm_tree.insert('', tk.END, values=row)
+            modules = row[3]
+            tests = row[4]
+            
+            # Determine status tag
+            if modules and tests:
+                tag = 'full'
+            elif modules or tests:
+                tag = 'partial'
+            else:
+                tag = 'none'
+                
+            self.rtm_tree.insert('', tk.END, values=row, tags=(tag,))
 
     # ==================== IMPACT ANALYSIS TAB ====================
 
