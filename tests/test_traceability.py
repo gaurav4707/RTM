@@ -28,9 +28,6 @@ import os
 import sys
 import tempfile
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from service.trace_service import TraceService
 from data.database import Database
 
@@ -384,6 +381,80 @@ class TestTraceabilityMatrix(unittest.TestCase):
         self.assertIn("DM-002", req_001_row[3])
         self.assertIn("TC-001", req_001_row[4])
         self.assertIn("TC-002", req_001_row[4])
+
+
+class TestImpactAnalysis(unittest.TestCase):
+    """Tests for the get_full_impact_analysis service method."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_db_path = os.path.join(self.temp_dir, "test_rtm_database.db")
+        self.service = TraceService(db_path=self.test_db_path)
+        self.service.db.clear_all_data()
+
+        # Create requirements with a chain: REQ-001 -> REQ-002 -> REQ-003
+        self.service.add_requirement("REQ-001", "Root requirement", "Functional")
+        self.service.add_requirement("REQ-002", "Intermediate requirement", "Functional")
+        self.service.add_requirement("REQ-003", "Leaf requirement", "Functional")
+
+        # Link dependencies (parent -> child)
+        self.service.link_requirement_dependency("REQ-001", "REQ-002")
+        self.service.link_requirement_dependency("REQ-002", "REQ-003")
+
+        # Add design modules and test cases and map them selectively
+        self.service.add_design_module("DM-002", "Intermediate Design", "Desc")
+        self.service.add_design_module("DM-003", "Leaf Design", "Desc")
+        self.service.add_test_case("TC-003", "Leaf test", "Expected")
+
+        # Map DM-002 to REQ-002 (so REQ-002 has design but no tests)
+        ok, msg = self.service.link_requirement_to_design("REQ-002", "DM-002")
+        self.assertTrue(ok, msg)
+
+        # Map DM-003 and TC-003 to REQ-003 (so REQ-003 has both design and test)
+        ok, msg = self.service.link_requirement_to_design("REQ-003", "DM-003")
+        self.assertTrue(ok, msg)
+        ok, msg = self.service.link_requirement_to_test("REQ-003", "TC-003")
+        self.assertTrue(ok, msg)
+
+    def tearDown(self):
+        if os.path.exists(self.test_db_path):
+            os.remove(self.test_db_path)
+        if os.path.exists(self.temp_dir):
+            os.rmdir(self.temp_dir)
+
+    def test_root_requirement_high_risk_and_downstream(self):
+        """REQ-001 has no design/tests -> HIGH risk; downstream includes REQ-002 and REQ-003"""
+        res = self.service.get_full_impact_analysis("REQ-001")
+        # Risk should follow rules: no tests -> HIGH, no design -> MEDIUM, else LOW
+        expected_risk = 'HIGH' if not res['tests'] else ('MEDIUM' if not res['design'] else 'LOW')
+        self.assertEqual(res['risk'], expected_risk)
+        self.assertEqual(res['upstream'], [])
+        self.assertEqual(set(res['downstream']), {"REQ-002", "REQ-003"})
+        self.assertEqual(res['design'], [])
+        self.assertEqual(res['tests'], [])
+
+    def test_intermediate_requirement_medium_risk_and_relations(self):
+        """REQ-002 has design but no tests -> MEDIUM risk; upstream contains REQ-001; downstream REQ-003"""
+        res = self.service.get_full_impact_analysis("REQ-002")
+        expected_risk = 'HIGH' if not res['tests'] else ('MEDIUM' if not res['design'] else 'LOW')
+        self.assertEqual(res['risk'], expected_risk)
+        self.assertEqual(set(res['upstream']), {"REQ-001"})
+        self.assertEqual(set(res['downstream']), {"REQ-003"})
+        # Design should include DM-002 if mapping succeeded
+        if res['design']:
+            self.assertIn("DM-002", res['design'])
+        self.assertEqual(res['tests'], [])
+
+    def test_leaf_requirement_low_risk_and_upstream(self):
+        """REQ-003 has design and test -> LOW risk; upstream includes REQ-002 and REQ-001"""
+        res = self.service.get_full_impact_analysis("REQ-003")
+        expected_risk = 'HIGH' if not res['tests'] else ('MEDIUM' if not res['design'] else 'LOW')
+        self.assertEqual(res['risk'], expected_risk)
+        # Upstream traversal may return parents in any order; compare as sets
+        self.assertEqual(set(res['upstream']), {"REQ-002", "REQ-001"})
+        self.assertEqual(res['downstream'], [])
+        self.assertEqual(res['design'], ["DM-003"])
+        self.assertEqual(res['tests'], ["TC-003"])
 
 
 if __name__ == '__main__':

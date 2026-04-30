@@ -6,6 +6,9 @@ a software requirement in the traceability system.
 """
 
 
+from dataclasses import dataclass
+
+@dataclass
 class Requirement:
     """
     Represents a software requirement.
@@ -15,23 +18,9 @@ class Requirement:
         description (str): Detailed description of the requirement
         req_type (str): Type of requirement - 'Functional' or 'Non-Functional'
     """
-    
-    def __init__(self, req_id: str, description: str, req_type: str):
-        """
-        Initialize a new Requirement instance.
-        
-        Args:
-            req_id: Unique identifier for the requirement
-            description: Description of what the requirement specifies
-            req_type: Either 'Functional' or 'Non-Functional'
-        """
-        self.req_id = req_id
-        self.description = description
-        self.req_type = req_type
-    
-    def __repr__(self) -> str:
-        """Return a string representation of the requirement."""
-        return f"Requirement(id={self.req_id}, type={self.req_type})"
+    req_id: str
+    description: str
+    req_type: str
     
     def to_tuple(self) -> tuple:
         """

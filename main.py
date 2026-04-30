@@ -76,10 +76,6 @@ To run unit tests: python -m unittest tests.test_traceability -v
 import sys
 import os
 
-# Add the parent directory to the path for proper module imports
-# This ensures the package structure works correctly
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from service.trace_service import TraceService
 from ui.main_ui import create_app
 

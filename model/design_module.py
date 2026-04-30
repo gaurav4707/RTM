@@ -6,6 +6,9 @@ a software design module in the traceability system.
 """
 
 
+from dataclasses import dataclass
+
+@dataclass
 class DesignModule:
     """
     Represents a software design module.
@@ -15,23 +18,9 @@ class DesignModule:
         name (str): Name of the design module
         description (str): Detailed description of the module's purpose
     """
-    
-    def __init__(self, module_id: str, name: str, description: str):
-        """
-        Initialize a new DesignModule instance.
-        
-        Args:
-            module_id: Unique identifier for the design module
-            name: Short name for the module
-            description: Detailed description of the module
-        """
-        self.module_id = module_id
-        self.name = name
-        self.description = description
-    
-    def __repr__(self) -> str:
-        """Return a string representation of the design module."""
-        return f"DesignModule(id={self.module_id}, name={self.name})"
+    module_id: str
+    name: str
+    description: str
     
     def to_tuple(self) -> tuple:
         """
