@@ -119,7 +119,7 @@ class RTMApplication:
         
         ttk.Button(btn_frame, text="Refresh Dashboard", command=self._refresh_dashboard_metrics).pack(side='left', padx=5)
         ttk.Button(btn_frame, text="System Health Check", command=self._run_system_validation).pack(side='left', padx=5)
-        ttk.Button(btn_frame, text="Detect Duplicates (AI)", command=self._run_duplicate_detection).pack(side='left', padx=5)
+       # ttk.Button(btn_frame, text="Detect Duplicates (AI)", command=self._run_duplicate_detection).pack(side='left', padx=5)
         ttk.Button(btn_frame, text="Show Relationship Graph", command=self._show_relationship_graph).pack(side='left', padx=5)
 
         # PDF Export Section
